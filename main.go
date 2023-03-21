@@ -3,8 +3,10 @@ package main
 import (
 	"archive/zip"
 	"fmt"
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/dustin/go-humanize"
+	"github.com/hwalker928/DataCrate/functions"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,39 +22,49 @@ func containsAnyString(str string, substr []string) bool {
 	return false
 }
 
-func listFiles(root string, includedExts []string, excludedDirectories []string) ([]string, error) {
+func listFiles(root []string, includedExts []string, excludedDirectories []string, excludedFiles []string) []string {
 	var files []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			if containsAnyString(strings.ToLower(path), excludedDirectories) {
-				return filepath.SkipDir
+	for _, r := range root {
+		filepath.Walk(r, func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				if containsAnyString(strings.ToLower(path), excludedDirectories) {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if err != nil {
+				fmt.Printf("Error walking path %s: %v\n", path, err.Error())
+				return nil
+			}
+			ext := strings.ToLower(filepath.Ext(path))
+			for _, includedExt := range includedExts {
+				if ext == includedExt {
+					fileName := strings.ToLower(filepath.Base(path))
+
+					if containsAnyString(fileName, excludedFiles) {
+						fmt.Printf("Skipped file %s\n", path)
+						break
+					}
+
+					files = append(files, path)
+					fmt.Printf("Added file %s (size: %s)\n", path, humanize.Bytes(uint64(info.Size())))
+					break
+				}
 			}
 			return nil
-		}
-		if err != nil {
-			fmt.Printf("Error walking path %s: %v\n", path, err.Error())
-			return nil
-		}
-		ext := strings.ToLower(filepath.Ext(path))
-		for _, includedExt := range includedExts {
-			if ext == includedExt {
-				files = append(files, path)
-				fmt.Printf("Added file %s\n", path)
-				break
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
+		})
+		fmt.Println("Finished walking path", r)
 	}
-	return files, nil
+
+	return files
 }
 
-func zipFiles(zipName string, files []string) error {
+func zipFiles(zipName string, files []string) {
+	fmt.Println("Zipping files...")
 	zipFile, err := os.Create(zipName)
 	if err != nil {
-		return err
+		fmt.Printf("Error creating zip: %s", err.Error())
+		return
 	}
 	defer zipFile.Close()
 
@@ -63,7 +75,7 @@ func zipFiles(zipName string, files []string) error {
 		fileToZip, err := os.Open(file)
 		if err != nil {
 			fmt.Printf("Error opening file %s: %v", file, err.Error())
-			return nil
+			return
 		}
 		defer fileToZip.Close()
 
@@ -71,14 +83,14 @@ func zipFiles(zipName string, files []string) error {
 		info, err := fileToZip.Stat()
 		if err != nil {
 			fmt.Printf("Error getting file info of %s: %v", file, err.Error())
-			return nil
+			return
 		}
 
 		// Create a new file header
 		header, err := zip.FileInfoHeader(info)
 		if err != nil {
 			fmt.Printf("Error creating file header for %s: %v", file, err.Error())
-			return nil
+			return
 		}
 
 		// Set the file name to preserve directory structure
@@ -88,25 +100,40 @@ func zipFiles(zipName string, files []string) error {
 		writer, err := zipWriter.CreateHeader(header)
 		if err != nil {
 			fmt.Printf("Error creating file header for %s: %v", file, err.Error())
-			return nil
+			return
 		}
 
 		// Write the file content to the zip archive
 		if _, err := io.Copy(writer, fileToZip); err != nil {
 			fmt.Printf("Error copying file %s to zip: %v", file, err.Error())
-			return nil
+			return
 		}
 	}
 
-	return nil
+	return
+}
+
+func Checkboxes(label string, opts []string) []string {
+	res := []string{}
+	prompt := &survey.MultiSelect{
+		Message: label,
+		Options: opts,
+	}
+	survey.AskOne(prompt, &res)
+
+	return res
 }
 
 func main() {
-	// ask user for root directory input
-	fmt.Println("Enter the root directory to zip:")
-	root := "."
-	_, err := fmt.Scanln(&root)
-	if err != nil {
+	drives := functions.GetDriveLetters()
+	answers := Checkboxes(
+		"Select drives to backup:",
+		drives,
+	)
+	s := strings.Join(answers, ", ")
+	fmt.Println("Selected drives for backup:", s)
+	if len(s) == 0 {
+		fmt.Println("No drives selected for backup. Exiting...")
 		return
 	}
 
@@ -114,26 +141,16 @@ func main() {
 
 	includedExts := []string{".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".txt", ".rtf", ".odt", ".ods", ".odp", ".csv", ".tsv", ".html", ".xml", ".json", ".yaml", ".md", ".tex", ".cfg", ".conf", ".properties", ".prefs", ".plist", ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".cue", ".bin", ".dat", ".db", ".sqlite", ".dbf", ".mdb", ".accdb", ".sql", ".tab", ".tsv", ".dbf", ".dif", ".jpg", ".jpeg", ".png", ".heic", ".gif", ".bmp", ".raw", ".mp4", ".avi", ".wmv", ".mov", ".mkv", ".mp3", ".wav", ".flac", ".aac", ".ogg"}
 	excludedDirectories := []string{"temp", "windows", "node_modules", "program files", "programdata", "microsoftteams", "perflogs", "$recycle.bin", "system volume information", "c:\recovery", "cachestorage", "appdata\\local\\packages"}
+	excludedFiles := []string{"desktop.ini", "thumbs.db", "ntuser.dat"}
 
-	files, err := listFiles(root, includedExts, excludedDirectories)
-	if err != nil {
-		log.Fatal(err)
-	}
+	files := listFiles(answers, includedExts, excludedDirectories, excludedFiles)
 
 	zipName := "output.zip"
-	err = zipFiles(zipName, files)
-	if err != nil {
-		log.Fatal(err)
-	}
+	zipFiles(zipName, files)
 
 	end := time.Now()
 	elapsed := end.Sub(start)
 
 	fmt.Printf("Created zip file %s with %d files.\n", zipName, len(files))
 	fmt.Printf("Took %s to run\n", elapsed)
-
-	_, err = fmt.Scanln()
-	if err != nil {
-		return
-	}
 }
