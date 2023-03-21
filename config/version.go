@@ -1,4 +1,4 @@
 package config
 
-const Version = "1.0.0"
+const Version = "0.0.2"
 const Author = "github.com/hwalker928"
