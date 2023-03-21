@@ -7,11 +7,14 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/dustin/go-humanize/english"
 	"github.com/fatih/color"
+	"github.com/hwalker928/DataCrate/config"
 	"github.com/hwalker928/DataCrate/functions"
 	"github.com/inancgumus/screen"
 	"github.com/sqweek/dialog"
 	"io"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -210,22 +213,44 @@ func main() {
 	function := ""
 	prompt := &survey.Select{
 		Message: "Select a function:",
-		Options: []string{"Create a crate", "Open a crate", "About DataCrates", "Shutdown computer", "Restart computer"},
+		Options: []string{"Create a crate", "Open a crate", "About DataCrates", "Exit DataCrates", "Shutdown computer", "Restart computer"},
 	}
 	survey.AskOne(prompt, &function)
 
 	if function == "Create a crate" {
 		CreateACrate()
+		fmt.Scanln()
+		main()
 	} else if function == "Open a crate" {
 		OpenACrate()
+		fmt.Scanln()
+		main()
+	} else if function == "Exit DataCrates" {
+		fmt.Println("Exiting DataCrates... Have a nice day!")
+		time.Sleep(1 * time.Second)
+		os.Exit(0)
 	} else if function == "About DataCrates" {
-		fmt.Println("DataCrates are a new way to backup your data. They are a zip file that contains all of your files, but they are also a self-contained archive that can be opened and browsed like a folder. DataCrates are also encrypted, so you can be sure that your data is safe.")
+		color.Cyan("You are running DataCrates v%s created by %s", config.Version, config.Author)
+		fmt.Println("\nDataCrates is a new way to back up your documents.\nCrates are an archive (known as .crate) that contains all of your personal documents, that becomes a zip file when decrypted.\nCrates are encrypted with a user-defined password, so you can be sure that your data is safe.\n\nDataCrates is only available for Windows and is written in Go.")
+		fmt.Scanln()
+		main()
 	} else if function == "Shutdown computer" {
 		fmt.Println("Shutting down computer...")
+		cmd := exec.Command("shutdown", "/s", "/t", "1")
+		err := cmd.Run()
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else if function == "Restart computer" {
 		fmt.Println("Restarting computer...")
+		cmd := exec.Command("shutdown", "/r", "/t", "1")
+		err := cmd.Run()
+		if err != nil {
+			log.Fatal(err)
+		}
 	} else {
-		fmt.Println("Invalid function selected. Exiting...")
-		return
+		fmt.Println("Invalid function selected. Please try again")
+		time.Sleep(2 * time.Second)
+		main()
 	}
 }
