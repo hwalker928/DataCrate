@@ -3,7 +3,8 @@
 ![GitHub](https://img.shields.io/github/license/hwalker928/DataCrate)
 ![GitHub issues](https://img.shields.io/github/issues-raw/hwalker928/DataCrate)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr-raw/hwalker928/DataCrate)
-![Total lines](https://img.shields.io/tokei/lines/github/hwalker928/DataCrate)
+
+**WARNING:** This program is currently in development and is not ready for use. Please do not use this program unless you are willing to accept the risk of data loss.
 
 ## What is DataCrates?
 
