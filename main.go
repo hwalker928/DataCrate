@@ -6,6 +6,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/dustin/go-humanize"
 	"github.com/hwalker928/DataCrate/functions"
+	"github.com/sqweek/dialog"
 	"io"
 	"os"
 	"path/filepath"
@@ -125,6 +126,18 @@ func Checkboxes(label string, opts []string) []string {
 }
 
 func main() {
+	filename, err := dialog.File().Filter("DataCrate archives", "crate").Title("Crate destination").SetStartFile("MyCrate-" + time.Now().Format("2006-01-02_15-04-05") + ".crate").Save()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if !strings.HasSuffix(filename, ".crate") {
+		filename += ".crate"
+	}
+
+	fmt.Println("Saving archive as:", filename)
+
 	drives := functions.GetDriveLetters()
 	answers := Checkboxes(
 		"Select drives to backup:",
@@ -145,12 +158,11 @@ func main() {
 
 	files := listFiles(answers, includedExts, excludedDirectories, excludedFiles)
 
-	zipName := "output.zip"
-	zipFiles(zipName, files)
+	zipFiles(filename, files)
 
 	end := time.Now()
 	elapsed := end.Sub(start)
 
-	fmt.Printf("Created zip file %s with %d files.\n", zipName, len(files))
+	fmt.Printf("Created zip file %s with %d files.\n", filename, len(files))
 	fmt.Printf("Took %s to run\n", elapsed)
 }
