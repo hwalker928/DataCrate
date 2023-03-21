@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize/english"
 	"github.com/hwalker928/DataCrate/functions"
 	"github.com/sqweek/dialog"
 	"io"
@@ -14,21 +15,12 @@ import (
 	"time"
 )
 
-func containsAnyString(str string, substr []string) bool {
-	for _, s := range substr {
-		if strings.Contains(str, s) {
-			return true
-		}
-	}
-	return false
-}
-
 func listFiles(root []string, includedExts []string, excludedDirectories []string, excludedFiles []string) []string {
 	var files []string
 	for _, r := range root {
 		filepath.Walk(r, func(path string, info os.FileInfo, err error) error {
 			if info.IsDir() {
-				if containsAnyString(strings.ToLower(path), excludedDirectories) {
+				if functions.ContainsAnyString(strings.ToLower(path), excludedDirectories) {
 					return filepath.SkipDir
 				}
 				return nil
@@ -42,8 +34,7 @@ func listFiles(root []string, includedExts []string, excludedDirectories []strin
 				if ext == includedExt {
 					fileName := strings.ToLower(filepath.Base(path))
 
-					if containsAnyString(fileName, excludedFiles) {
-						fmt.Printf("Skipped file %s\n", path)
+					if functions.ContainsAnyString(fileName, excludedFiles) {
 						break
 					}
 
@@ -114,18 +105,7 @@ func zipFiles(zipName string, files []string) {
 	return
 }
 
-func Checkboxes(label string, opts []string) []string {
-	res := []string{}
-	prompt := &survey.MultiSelect{
-		Message: label,
-		Options: opts,
-	}
-	survey.AskOne(prompt, &res)
-
-	return res
-}
-
-func main() {
+func CreateACrate() {
 	filename, err := dialog.File().Filter("DataCrate archives", "crate").Title("Crate destination").SetStartFile("MyCrate-" + time.Now().Format("2006-01-02_15-04-05") + ".crate").Save()
 	if err != nil {
 		fmt.Println(err)
@@ -139,7 +119,7 @@ func main() {
 	fmt.Println("Saving archive as:", filename)
 
 	drives := functions.GetDriveLetters()
-	answers := Checkboxes(
+	answers := functions.Checkboxes(
 		"Select drives to backup:",
 		drives,
 	)
@@ -163,6 +143,29 @@ func main() {
 	end := time.Now()
 	elapsed := end.Sub(start)
 
-	fmt.Printf("Created zip file %s with %d files.\n", filename, len(files))
-	fmt.Printf("Took %s to run\n", elapsed)
+	fmt.Printf("Created zip file %s with %d %s in %s.\n", filename, len(files), english.PluralWord(len(files), "file", "files"), elapsed)
+}
+
+func main() {
+	fmt.Println("\n8888888b.           888              .d8888b.                  888                     \n888  \"Y88b          888             d88P  Y88b                 888                     \n888    888          888             888    888                 888                     \n888    888  8888b.  888888  8888b.  888        888d888 8888b.  888888 .d88b.  .d8888b  \n888    888     \"88b 888        \"88b 888        888P\"      \"88b 888   d8P  Y8b 88K      \n888    888 .d888888 888    .d888888 888    888 888    .d888888 888   88888888 \"Y8888b. \n888  .d88P 888  888 Y88b.  888  888 Y88b  d88P 888    888  888 Y88b. Y8b.          X88 \n8888888P\"  \"Y888888  \"Y888 \"Y888888  \"Y8888P\"  888    \"Y888888  \"Y888 \"Y8888   88888P'\n ")
+
+	function := ""
+	prompt := &survey.Select{
+		Message: "Select a function:",
+		Options: []string{"Create a crate", "About DataCrates", "Shutdown computer", "Restart computer"},
+	}
+	survey.AskOne(prompt, &function)
+
+	if function == "Create a crate" {
+		CreateACrate()
+	} else if function == "About DataCrates" {
+		fmt.Println("DataCrates are a new way to backup your data. They are a zip file that contains all of your files, but they are also a self-contained archive that can be opened and browsed like a folder. DataCrates are also encrypted, so you can be sure that your data is safe.")
+	} else if function == "Shutdown computer" {
+		fmt.Println("Shutting down computer...")
+	} else if function == "Restart computer" {
+		fmt.Println("Restarting computer...")
+	} else {
+		fmt.Println("Invalid function selected. Exiting...")
+		return
+	}
 }
