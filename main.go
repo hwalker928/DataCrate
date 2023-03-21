@@ -132,6 +132,12 @@ func CreateACrate() {
 		return
 	}
 
+	password := "MyPassword!"
+	prompt := &survey.Password{
+		Message: "Please enter the password to encrypt the crate:",
+	}
+	survey.AskOne(prompt, &password)
+
 	start := time.Now()
 
 	includedExts := []string{".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".pdf", ".txt", ".rtf", ".odt", ".ods", ".odp", ".csv", ".tsv", ".html", ".xml", ".json", ".yaml", ".md", ".tex", ".cfg", ".conf", ".properties", ".prefs", ".plist", ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".cue", ".bin", ".dat", ".db", ".sqlite", ".dbf", ".mdb", ".accdb", ".sql", ".tab", ".tsv", ".dbf", ".dif", ".jpg", ".jpeg", ".png", ".heic", ".gif", ".bmp", ".raw", ".mp4", ".avi", ".wmv", ".mov", ".mkv", ".mp3", ".wav", ".flac", ".aac", ".ogg"}
@@ -145,7 +151,7 @@ func CreateACrate() {
 	end := time.Now()
 	elapsed := end.Sub(start)
 
-	functions.EncryptFile(filename+"-temp", "passwordpassword", filename)
+	functions.EncryptFile(filename+"-temp", password, filename)
 
 	err = os.Remove(filename + "-temp")
 	if err != nil {

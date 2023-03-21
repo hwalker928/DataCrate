@@ -6,6 +6,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"golang.org/x/crypto/scrypt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -18,8 +19,11 @@ func EncryptFile(filepath string, password string, outputFile string) {
 		panic(err.Error())
 	}
 
-	// this is a key
-	key := []byte(password)
+	// this is the key
+	key, err := scrypt.Key([]byte(password), []byte("D@t@Cr@tes!!"), 16384, 8, 1, 32)
+	if err != nil {
+		panic(err)
+	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -61,7 +65,10 @@ func DecryptFile(filepath string, password string, outputFile string) {
 	ciphertext = ciphertext[aes.BlockSize:]
 
 	// this is the key
-	key := []byte(password)
+	key, err := scrypt.Key([]byte(password), []byte("D@t@Cr@tes!!"), 16384, 8, 1, 32)
+	if err != nil {
+		panic(err)
+	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
