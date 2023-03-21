@@ -6,7 +6,9 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/dustin/go-humanize"
 	"github.com/dustin/go-humanize/english"
+	"github.com/fatih/color"
 	"github.com/hwalker928/DataCrate/functions"
+	"github.com/inancgumus/screen"
 	"github.com/sqweek/dialog"
 	"io"
 	"os"
@@ -138,26 +140,78 @@ func CreateACrate() {
 
 	files := listFiles(answers, includedExts, excludedDirectories, excludedFiles)
 
-	zipFiles(filename, files)
+	zipFiles(filename+"-temp", files)
 
 	end := time.Now()
 	elapsed := end.Sub(start)
 
-	fmt.Printf("Created zip file %s with %d %s in %s.\n", filename, len(files), english.PluralWord(len(files), "file", "files"), elapsed)
+	functions.EncryptFile(filename+"-temp", "passwordpassword", filename)
+
+	err = os.Remove(filename + "-temp")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	color.Green("Successfully created a new crate: %s with %d %s in %s.", filename, len(files), english.PluralWord(len(files), "file", "files"), elapsed)
+}
+
+func OpenACrate() {
+	filename, err := dialog.File().Filter("DataCrate archives", "crate").Load()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	zipFilename, err := dialog.File().Filter("Zip archives", "zip").Title("Extracted crate destination").SetStartFile(filename + ".zip").Save()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if !strings.HasSuffix(zipFilename, ".zip") {
+		zipFilename += ".zip"
+	}
+
+	password := ""
+	prompt := &survey.Password{
+		Message: "Please enter the password to decrypt the crate:",
+	}
+	survey.AskOne(prompt, &password)
+
+	functions.DecryptFile(filename, password, zipFilename)
+	if functions.IsValidZipFile(zipFilename) {
+		color.Green("Successfully decrypted crate: %s", filename)
+		color.Green("Decrypted crate to: %s", zipFilename)
+	} else {
+		color.Red("Failed to decrypt crate: %s", filename)
+		color.Red("Please check that you have entered the correct password, and that the crate is not corrupted.")
+		err := os.Remove(zipFilename)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+}
+
+func clearScreen() {
+	screen.Clear()
+	screen.MoveTopLeft()
 }
 
 func main() {
-	fmt.Println("\n8888888b.           888              .d8888b.                  888                     \n888  \"Y88b          888             d88P  Y88b                 888                     \n888    888          888             888    888                 888                     \n888    888  8888b.  888888  8888b.  888        888d888 8888b.  888888 .d88b.  .d8888b  \n888    888     \"88b 888        \"88b 888        888P\"      \"88b 888   d8P  Y8b 88K      \n888    888 .d888888 888    .d888888 888    888 888    .d888888 888   88888888 \"Y8888b. \n888  .d88P 888  888 Y88b.  888  888 Y88b  d88P 888    888  888 Y88b. Y8b.          X88 \n8888888P\"  \"Y888888  \"Y888 \"Y888888  \"Y8888P\"  888    \"Y888888  \"Y888 \"Y8888   88888P'\n ")
+	clearScreen()
+	color.Green("\n8888888b.           888              .d8888b.                  888                     \n888  \"Y88b          888             d88P  Y88b                 888                     \n888    888          888             888    888                 888                     \n888    888  8888b.  888888  8888b.  888        888d888 8888b.  888888 .d88b.  .d8888b  \n888    888     \"88b 888        \"88b 888        888P\"      \"88b 888   d8P  Y8b 88K      \n888    888 .d888888 888    .d888888 888    888 888    .d888888 888   88888888 \"Y8888b. \n888  .d88P 888  888 Y88b.  888  888 Y88b  d88P 888    888  888 Y88b. Y8b.          X88 \n8888888P\"  \"Y888888  \"Y888 \"Y888888  \"Y8888P\"  888    \"Y888888  \"Y888 \"Y8888   88888P'\n ")
 
 	function := ""
 	prompt := &survey.Select{
 		Message: "Select a function:",
-		Options: []string{"Create a crate", "About DataCrates", "Shutdown computer", "Restart computer"},
+		Options: []string{"Create a crate", "Open a crate", "About DataCrates", "Shutdown computer", "Restart computer"},
 	}
 	survey.AskOne(prompt, &function)
 
 	if function == "Create a crate" {
 		CreateACrate()
+	} else if function == "Open a crate" {
+		OpenACrate()
 	} else if function == "About DataCrates" {
 		fmt.Println("DataCrates are a new way to backup your data. They are a zip file that contains all of your files, but they are also a self-contained archive that can be opened and browsed like a folder. DataCrates are also encrypted, so you can be sure that your data is safe.")
 	} else if function == "Shutdown computer" {
