@@ -11,3 +11,8 @@
 DataCrates is a program designed to back up personal documents (such as photos, videos, documents, etc.) to an archive file, known as a crate. The crate is encrypted using a user-defined password and can then be stored on a cloud service or local storage. The crates can be decrypted and the original files restored in the form of a zip archive.
 
 ![DataCrates](https://i.imgur.com/lP8Aqvu.png)
+
+## Download DataCrates
+
+- Windows: **No download is currently provided due to early development stages.**
+- Source Code: https://github.com/hwalker928/DataCrate/archive/refs/heads/master.zip
