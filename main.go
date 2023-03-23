@@ -250,7 +250,6 @@ func main() {
 		}
 	} else {
 		fmt.Println("Invalid function selected. Please try again")
-		time.Sleep(2 * time.Second)
-		main()
+		os.Exit(3)  // Uh, yyes. Better :)
 	}
 }
