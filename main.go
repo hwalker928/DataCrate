@@ -3,6 +3,14 @@ package main
 import (
 	"archive/zip"
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/dustin/go-humanize"
 	"github.com/dustin/go-humanize/english"
@@ -11,13 +19,6 @@ import (
 	"github.com/hwalker928/DataCrate/functions"
 	"github.com/inancgumus/screen"
 	"github.com/sqweek/dialog"
-	"io"
-	"log"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 func listFiles(root []string, includedExts []string, excludedDirectories []string, excludedFiles []string) []string {
@@ -186,10 +187,15 @@ func OpenACrate() {
 	}
 	survey.AskOne(prompt, &password)
 
+	start := time.Now()
+
 	functions.DecryptFile(filename, password, zipFilename)
+
+	end := time.Now()
+	elapsed := end.Sub(start)
+
 	if functions.IsValidZipFile(zipFilename) {
-		color.Green("Successfully decrypted crate: %s", filename)
-		color.Green("Decrypted crate to: %s", zipFilename)
+		color.Green("Successfully decrypted crate %s in %s.", filename, elapsed)
 	} else {
 		color.Red("Failed to decrypt crate: %s", filename)
 		color.Red("Please check that you have entered the correct password, and that the crate is not corrupted.")
