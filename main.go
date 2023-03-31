@@ -2,8 +2,10 @@ package main
 
 import (
 	"archive/zip"
+	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -12,7 +14,6 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/dustin/go-humanize"
 	"github.com/dustin/go-humanize/english"
 	"github.com/fatih/color"
 	"github.com/hwalker928/DataCrate/config"
@@ -45,7 +46,7 @@ func listFiles(root []string, includedExts []string, excludedDirectories []strin
 					}
 
 					files = append(files, path)
-					fmt.Printf("Added file %s (size: %s)\n", path, humanize.Bytes(uint64(info.Size())))
+					// fmt.Printf("Added file %s (size: %s)\n", path, humanize.Bytes(uint64(info.Size())))
 					break
 				}
 			}
@@ -72,7 +73,7 @@ func zipFiles(zipName string, files []string) {
 	for _, file := range files {
 		fileToZip, err := os.Open(file)
 		if err != nil {
-			fmt.Printf("Error opening file %s: %v", file, err.Error())
+			color.Red("Error opening file %s", file)
 			return
 		}
 		defer fileToZip.Close()
@@ -136,11 +137,44 @@ func CreateACrate() {
 		return
 	}
 
-	password := "MyPassword!"
-	prompt := &survey.Password{
-		Message: "Please enter the password to encrypt the crate:",
+	encryptionMethod := ""
+	prompt := &survey.Select{
+		Message: "Select an encryption method:",
+		Options: []string{"Key file (Recommended)", "User-defined password", "Random password", "No encryption (Not recommended)"},
 	}
-	survey.AskOne(prompt, &password)
+	survey.AskOne(prompt, &encryptionMethod)
+
+	password := ""
+	showPasswordAtEnd := false
+
+	if encryptionMethod == "Key file (Recommended)" {
+		keyFilename, err := dialog.File().Filter("DataCrate key", "key").Title("Crate key destination").SetStartFile(filename + ".key").Save()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		password = functions.GenerateRandomString(4096)
+
+		// write the key to the key file
+		err = ioutil.WriteFile(keyFilename, []byte(password), 0644)
+		if err != nil {
+			fmt.Println("Error writing key to file:", err.Error())
+			return
+		}
+
+	} else if encryptionMethod == "User-defined password" {
+		password = ""
+		prompt2 := &survey.Password{
+			Message: "Please enter the password to encrypt the crate:",
+		}
+		survey.AskOne(prompt2, &password)
+	} else if encryptionMethod == "Random password" {
+		password = functions.GenerateRandomString(32)
+		showPasswordAtEnd = true
+	} else if encryptionMethod == "No encryption (Not recommended)" {
+		color.Red("WARNING: Crate will not be encrypted. This is not recommended.")
+	}
 
 	start := time.Now()
 
@@ -162,7 +196,12 @@ func CreateACrate() {
 		fmt.Println(err)
 		return
 	}
+
 	color.Green("Successfully created a new crate: %s with %d %s in %s.", filename, len(files), english.PluralWord(len(files), "file", "files"), elapsed)
+
+	if showPasswordAtEnd {
+		color.Cyan("Random password generated: %s", password)
+	}
 }
 
 func OpenACrate() {
@@ -181,11 +220,43 @@ func OpenACrate() {
 		zipFilename += ".zip"
 	}
 
-	password := ""
-	prompt := &survey.Password{
-		Message: "Please enter the password to decrypt the crate:",
+	encryptionMethod := ""
+	prompt := &survey.Select{
+		Message: "Select the encryption method used for this crate:",
+		Options: []string{"Key file", "Password", "No encryption"},
 	}
-	survey.AskOne(prompt, &password)
+	survey.AskOne(prompt, &encryptionMethod)
+
+	password := ""
+
+	if encryptionMethod == "Key file" {
+		keyFilename, err := dialog.File().Filter("DataCrate key", "key").Load()
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		file, err := os.Open(keyFilename)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+
+		// Create a scanner to read the file line by line
+		scanner := bufio.NewScanner(file)
+
+		// Read the first line
+		if scanner.Scan() {
+			password = scanner.Text()
+		}
+	} else if encryptionMethod == "Password" {
+		prompt := &survey.Password{
+			Message: "Please enter the password to decrypt the crate:",
+		}
+		survey.AskOne(prompt, &password)
+	} else if encryptionMethod == "No encryption" {
+		color.Red("WARNING: Crate is not encrypted. This is not recommended.")
+	}
 
 	start := time.Now()
 
@@ -198,7 +269,7 @@ func OpenACrate() {
 		color.Green("Successfully decrypted crate %s in %s.", filename, elapsed)
 	} else {
 		color.Red("Failed to decrypt crate: %s", filename)
-		color.Red("Please check that you have entered the correct password, and that the crate is not corrupted.")
+		color.Red("Please check that you have chosen the correct encryption method and entered the correct information, and that the crate is not corrupted.")
 		err := os.Remove(zipFilename)
 		if err != nil {
 			fmt.Println(err)
@@ -256,6 +327,6 @@ func main() {
 		}
 	} else {
 		fmt.Println("Invalid function selected. Please try again")
-		os.Exit(3)  // Uh, yyes. Better :)
+		os.Exit(3) // Uh, yyes. Better :)
 	}
 }

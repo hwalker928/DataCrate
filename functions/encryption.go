@@ -6,10 +6,12 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"golang.org/x/crypto/scrypt"
+	"encoding/base64"
 	"io"
 	"io/ioutil"
 	"os"
+
+	"golang.org/x/crypto/scrypt"
 )
 
 func EncryptFile(filepath string, password string, outputFile string) {
@@ -110,4 +112,21 @@ func IsValidZipFile(filePath string) bool {
 	}
 
 	return true
+}
+
+func GenerateRandomString(length int) string {
+	// Create a byte slice to store the random bytes
+    randomBytes := make([]byte, length)
+
+    // Use crypto/rand to fill the byte slice with random bytes
+    _, err := rand.Read(randomBytes)
+    if err != nil {
+        panic(err)
+    }
+
+    // Convert the byte slice to a base64-encoded string
+    password := base64.URLEncoding.EncodeToString(randomBytes)[:length]
+
+    // Print the password
+    return password
 }
