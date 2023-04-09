@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -147,7 +146,8 @@ func CreateACrate() {
 	password := ""
 	showPasswordAtEnd := false
 
-	if encryptionMethod == "Key file (Recommended)" {
+	switch encryptionMethod {
+	case "Key file (Recommended)":
 		keyFilename, err := dialog.File().Filter("DataCrate key", "key").Title("Crate key destination").SetStartFile(filename + ".key").Save()
 		if err != nil {
 			fmt.Println(err)
@@ -162,17 +162,16 @@ func CreateACrate() {
 			fmt.Println("Error writing key to file:", err.Error())
 			return
 		}
-
-	} else if encryptionMethod == "User-defined password" {
+	case "User-defined password":
 		password = ""
 		prompt2 := &survey.Password{
 			Message: "Please enter the password to encrypt the crate:",
 		}
 		survey.AskOne(prompt2, &password)
-	} else if encryptionMethod == "Random password" {
+	case "Random password":
 		password = functions.GenerateRandomString(32)
 		showPasswordAtEnd = true
-	} else if encryptionMethod == "No encryption (Not recommended)" {
+	case "No encryption (Not recommended)":
 		color.Red("WARNING: Crate will not be encrypted. This is not recommended.")
 	}
 
@@ -229,7 +228,8 @@ func OpenACrate() {
 
 	password := ""
 
-	if encryptionMethod == "Key file" {
+	switch encryptionMethod {
+	case "Key file":
 		keyFilename, err := dialog.File().Filter("DataCrate key", "key").Load()
 		if err != nil {
 			fmt.Println(err)
@@ -249,12 +249,12 @@ func OpenACrate() {
 		if scanner.Scan() {
 			password = scanner.Text()
 		}
-	} else if encryptionMethod == "Password" {
+	case "Password":
 		prompt := &survey.Password{
 			Message: "Please enter the password to decrypt the crate:",
 		}
 		survey.AskOne(prompt, &password)
-	} else if encryptionMethod == "No encryption" {
+	case "No encryption":
 		color.Red("WARNING: Crate is not encrypted. This is not recommended.")
 	}
 
@@ -294,39 +294,39 @@ func main() {
 	}
 	survey.AskOne(prompt, &function)
 
-	if function == "Create a crate" {
+	switch function {
+	case "Create a crate":
 		CreateACrate()
 		fmt.Scanln()
 		main()
-	} else if function == "Open a crate" {
+	case "Open a crate":
 		OpenACrate()
 		fmt.Scanln()
 		main()
-	} else if function == "Exit DataCrates" {
+	case "Exit DataCrates":
 		fmt.Println("Exiting DataCrates... Have a nice day!")
 		time.Sleep(1 * time.Second)
 		os.Exit(0)
-	} else if function == "About DataCrates" {
+	case "About DataCrates":
 		color.Cyan("You are running DataCrates v%s created by %s", config.Version, config.Author)
-		fmt.Println("\nDataCrates is a new way to back up your documents.\nCrates are an archive (known as .crate) that contains all of your personal documents, that becomes a zip file when decrypted.\nCrates are encrypted with a user-defined password, so you can be sure that your data is safe.\n\nDataCrates is only available for Windows and is written in Go.")
+		fmt.Println("\nDataCrates is a new way to back up your documents.\nCrates are an archive (known as .crate) that contains all of your personal documents, that becomes a zip file when decrypted.\nCrates are encrypted with a user-defined password, so you can be sure that your data is safe")
 		fmt.Scanln()
 		main()
-	} else if function == "Shutdown computer" {
-		fmt.Println("Shutting down computer...")
-		cmd := exec.Command("shutdown", "/s", "/t", "1")
-		err := cmd.Run()
+	case "Shutdown computer":
+		color.Red("Shutting down computer...")
+		time.Sleep(1 * time.Second)
+		err := exec.Command("shutdown", "/s", "/t", "0").Run()
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			return
 		}
-	} else if function == "Restart computer" {
-		fmt.Println("Restarting computer...")
-		cmd := exec.Command("shutdown", "/r", "/t", "1")
-		err := cmd.Run()
+	case "Restart computer":
+		color.Red("Restarting computer...")
+		time.Sleep(1 * time.Second)
+		err := exec.Command("shutdown", "/r", "/t", "0").Run()
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			return
 		}
-	} else {
-		fmt.Println("Invalid function selected. Please try again")
-		os.Exit(3) // Uh, yyes. Better :)
 	}
 }

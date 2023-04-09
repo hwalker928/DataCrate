@@ -2,6 +2,7 @@ package functions
 
 import (
 	"fmt"
+
 	"golang.org/x/sys/windows"
 )
 
@@ -17,7 +18,7 @@ func GetDriveLetters() []string {
 	var letters []string
 	for i := uint(0); i < 26; i++ {
 		if (drives>>i)&1 == 1 {
-			letter := string('A' + i)
+			letter := string(rune('A' + i))
 			letters = append(letters, letter+":\\")
 		}
 	}
