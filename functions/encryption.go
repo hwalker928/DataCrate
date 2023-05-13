@@ -2,6 +2,7 @@ package functions
 
 import (
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
@@ -13,6 +14,24 @@ import (
 
 	"golang.org/x/crypto/scrypt"
 )
+
+func ReadKeyFile(filepath string) string {
+	file, err := os.Open(filepath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// Create a scanner to read the file line by line
+	scanner := bufio.NewScanner(file)
+
+	// Read the first line
+	if scanner.Scan() {
+		return scanner.Text()
+	}
+
+	return ""
+}
 
 func EncryptFile(filepath string, password string, outputFile string) {
 	// read content from your file
@@ -116,17 +135,17 @@ func IsValidZipFile(filePath string) bool {
 
 func GenerateRandomString(length int) string {
 	// Create a byte slice to store the random bytes
-    randomBytes := make([]byte, length)
+	randomBytes := make([]byte, length)
 
-    // Use crypto/rand to fill the byte slice with random bytes
-    _, err := rand.Read(randomBytes)
-    if err != nil {
-        panic(err)
-    }
+	// Use crypto/rand to fill the byte slice with random bytes
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		panic(err)
+	}
 
-    // Convert the byte slice to a base64-encoded string
-    password := base64.URLEncoding.EncodeToString(randomBytes)[:length]
+	// Convert the byte slice to a base64-encoded string
+	password := base64.URLEncoding.EncodeToString(randomBytes)[:length]
 
-    // Print the password
-    return password
+	// Print the password
+	return password
 }

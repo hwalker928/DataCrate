@@ -1,14 +1,10 @@
 package main
 
 import (
-	"archive/zip"
-	"bufio"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,96 +16,6 @@ import (
 	"github.com/inancgumus/screen"
 	"github.com/sqweek/dialog"
 )
-
-func listFiles(root []string, includedExts []string, excludedDirectories []string, excludedFiles []string) []string {
-	var files []string
-	for _, r := range root {
-		filepath.Walk(r, func(path string, info os.FileInfo, err error) error {
-			if info.IsDir() {
-				if functions.ContainsAnyString(strings.ToLower(path), excludedDirectories) {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			if err != nil {
-				fmt.Printf("Error walking path %s: %v\n", path, err.Error())
-				return nil
-			}
-			ext := strings.ToLower(filepath.Ext(path))
-			for _, includedExt := range includedExts {
-				if ext == includedExt {
-					fileName := strings.ToLower(filepath.Base(path))
-
-					if functions.ContainsAnyString(fileName, excludedFiles) {
-						break
-					}
-
-					files = append(files, path)
-					// fmt.Printf("Added file %s (size: %s)\n", path, humanize.Bytes(uint64(info.Size())))
-					break
-				}
-			}
-			return nil
-		})
-		fmt.Println("Finished walking path", r)
-	}
-
-	return files
-}
-
-func zipFiles(zipName string, files []string) {
-	fmt.Println("Zipping files...")
-	zipFile, err := os.Create(zipName)
-	if err != nil {
-		fmt.Printf("Error creating zip: %s", err.Error())
-		return
-	}
-	defer zipFile.Close()
-
-	zipWriter := zip.NewWriter(zipFile)
-	defer zipWriter.Close()
-
-	for _, file := range files {
-		fileToZip, err := os.Open(file)
-		if err != nil {
-			color.Red("Error opening file %s", file)
-			return
-		}
-		defer fileToZip.Close()
-
-		// Get the file information
-		info, err := fileToZip.Stat()
-		if err != nil {
-			fmt.Printf("Error getting file info of %s: %v", file, err.Error())
-			return
-		}
-
-		// Create a new file header
-		header, err := zip.FileInfoHeader(info)
-		if err != nil {
-			fmt.Printf("Error creating file header for %s: %v", file, err.Error())
-			return
-		}
-
-		// Set the file name to preserve directory structure
-		header.Name = strings.ReplaceAll(filepath.ToSlash(file), ":", "")
-
-		// Add the file header to the zip archive
-		writer, err := zipWriter.CreateHeader(header)
-		if err != nil {
-			fmt.Printf("Error creating file header for %s: %v", file, err.Error())
-			return
-		}
-
-		// Write the file content to the zip archive
-		if _, err := io.Copy(writer, fileToZip); err != nil {
-			fmt.Printf("Error copying file %s to zip: %v", file, err.Error())
-			return
-		}
-	}
-
-	return
-}
 
 func CreateACrate() {
 	filename, err := dialog.File().Filter("DataCrate archives", "crate").Title("Crate destination").SetStartFile("MyCrate-" + time.Now().Format("2006-01-02_15-04-05") + ".crate").Save()
@@ -181,9 +87,9 @@ func CreateACrate() {
 	excludedDirectories := []string{"temp", "windows", "node_modules", "program files", "programdata", "microsoftteams", "perflogs", "$recycle.bin", "system volume information", "c:\recovery", "cache", "appdata\\local\\packages"}
 	excludedFiles := []string{"desktop.ini", "thumbs.db", "ntuser.dat"}
 
-	files := listFiles(answers, includedExts, excludedDirectories, excludedFiles)
+	files := functions.ListFiles(answers, includedExts, excludedDirectories, excludedFiles)
 
-	zipFiles(filename+"-temp", files)
+	functions.ZipFiles(filename+"-temp", files)
 
 	end := time.Now()
 	elapsed := end.Sub(start)
@@ -236,19 +142,8 @@ func OpenACrate() {
 			return
 		}
 
-		file, err := os.Open(keyFilename)
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
+		password = functions.ReadKeyFile(keyFilename)
 
-		// Create a scanner to read the file line by line
-		scanner := bufio.NewScanner(file)
-
-		// Read the first line
-		if scanner.Scan() {
-			password = scanner.Text()
-		}
 	case "Password":
 		prompt := &survey.Password{
 			Message: "Please enter the password to decrypt the crate:",
