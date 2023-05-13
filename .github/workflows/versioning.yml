@@ -13,10 +13,12 @@ jobs:
         uses: actions/checkout@v1
       - name: Get version
         run: VERSION_NUMBER=$(grep -oP 'const Version = "\K\d+\.\d+\.\d+' config/version.go)
+      - name: Output version
+        run: echo $VERSION_NUMBER
       - name: POST to API
         run: |
           curl -X POST \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer ${{ secrets.PTERODACTYL_API }}" \
-          -d '{"data": "$VERSION_NUMBER" }"}' \
+          -d '{"data": "${VERSION_NUMBER}" }"}' \
           ${{ secrets.PTERODACTYL_URL }}/api/client/servers/${{ secrets.PTERODACTYL_SERVER }}/files/write?file=/static/index.html
