@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
       - name: Get version
-        run: VERSION_NUMBER=$(grep -oP 'const Version = "\K\d+\.\d+\.\d+' config/version.go)
+        run: VERSION_NUMBER=$(grep -o 'const Version = "[0-9]\+\.[0-9]\+\.[0-9]\+"' config/version.go | cut -d '"' -f2)
       - name: Output version
         run: echo $VERSION_NUMBER
       - name: POST to API
